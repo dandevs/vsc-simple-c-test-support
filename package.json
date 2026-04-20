@@ -4,6 +4,10 @@
   "description": "Saves VS Code breakpoints to a local JSON file on every change",
   "version": "0.0.1",
   "publisher": "dandevs",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dandevs/vsc-simple-c-test-support"
+  },
   "engines": {
     "vscode": "^1.85.0"
   },
