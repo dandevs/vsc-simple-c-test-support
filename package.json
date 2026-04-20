@@ -1,0 +1,55 @@
+{
+  "name": "simple-c-tester-support",
+  "displayName": "Simple C Tester Support",
+  "description": "Saves VS Code breakpoints to a local JSON file on every change",
+  "version": "0.0.1",
+  "publisher": "dandevs",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished",
+    "onCommand:breakpointServer.showOutput",
+    "onCommand:breakpointServer.writeBreakpoints"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "breakpointServer.showOutput",
+        "title": "Show Breakpoints Output"
+      },
+      {
+        "command": "breakpointServer.writeBreakpoints",
+        "title": "Write Breakpoints to File"
+      }
+    ],
+    "configuration": {
+      "title": "Breakpoint Server",
+      "properties": {
+        "breakpointServer.outputPath": {
+          "type": "string",
+          "default": "test_build/breakpoints.json",
+          "description": "Output file path for breakpoints (relative to workspace root)"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "compile-tests": "tsc -p ./tsconfig.test.json",
+    "watch": "tsc -watch -p ./",
+    "test": "npm run compile-tests && node --test \"out-test/test/**/*.test.js\"",
+    "build": "npm run compile && npx vsce package"
+  },
+  "devDependencies": {
+    "@vscode/vsce": "^3.6.2",
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.85.0",
+    "typescript": "^5.3.0"
+  }
+}
