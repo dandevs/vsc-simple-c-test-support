@@ -1,69 +1,61 @@
 import * as path from "path";
 
-export const DEFAULT_OUTPUT_PATH = "test_build/breakpoints.json";
+export const DEFAULT_OUTPUT_FOLDER = "test_build";
+export const BREAKPOINTS_FILENAME = "breakpoints.json";
 
-export interface PathResolution {
-  outputPath: string;
+export interface FolderResolution {
+  folderPath: string;
   warning?: string;
 }
 
-function fallbackWithWarning(warning: string): PathResolution {
+function fallbackWithWarning(warning: string): FolderResolution {
   return {
-    outputPath: DEFAULT_OUTPUT_PATH,
+    folderPath: DEFAULT_OUTPUT_FOLDER,
     warning,
   };
 }
 
-export function resolveOutputPath(rawPath: unknown): PathResolution {
+export function resolveOutputFolder(rawPath: unknown): FolderResolution {
   if (typeof rawPath !== "string" || rawPath.trim().length === 0) {
     return fallbackWithWarning(
-      `Invalid breakpointServer.outputPath setting. Falling back to default: ${DEFAULT_OUTPUT_PATH}`
+      `Invalid breakpointServer.outputFolderPath setting. Falling back to default: ${DEFAULT_OUTPUT_FOLDER}`
     );
   }
 
-  const trimmed = rawPath.trim().replace(/\\/g, "/");
+  const trimmed = rawPath.trim().replace(/\\/g, "/").replace(/\/+$/, "");
 
   if (
     /^[a-zA-Z][a-zA-Z\d+.-]*:/.test(trimmed) &&
     !/^[a-zA-Z]:/.test(trimmed)
   ) {
     return fallbackWithWarning(
-      `breakpointServer.outputPath must be a plain relative file path. Falling back to default: ${DEFAULT_OUTPUT_PATH}`
+      `breakpointServer.outputFolderPath must be a plain relative path. Falling back to default: ${DEFAULT_OUTPUT_FOLDER}`
     );
   }
 
-  const normalized = path.normalize(trimmed);
-  const normalizedForward = normalized.replace(/\\/g, "/");
-
-  if (/[\\/]$/.test(trimmed)) {
-    return fallbackWithWarning(
-      `breakpointServer.outputPath must include a file name. Falling back to default: ${DEFAULT_OUTPUT_PATH}`
-    );
+  if (trimmed === "") {
+    return { folderPath: "." };
   }
 
-  if (normalizedForward === "." || normalizedForward === "..") {
-    return fallbackWithWarning(
-      `breakpointServer.outputPath must point to a file path. Falling back to default: ${DEFAULT_OUTPUT_PATH}`
-    );
-  }
+  const normalized = path.normalize(trimmed).replace(/\\/g, "/");
 
   if (path.isAbsolute(normalized)) {
     return fallbackWithWarning(
-      `breakpointServer.outputPath must be a relative path. Falling back to default: ${DEFAULT_OUTPUT_PATH}`
+      `breakpointServer.outputFolderPath must be a relative path. Falling back to default: ${DEFAULT_OUTPUT_FOLDER}`
     );
   }
 
-  if (/^[a-zA-Z]:/.test(normalizedForward)) {
+  if (/^[a-zA-Z]:/.test(normalized)) {
     return fallbackWithWarning(
-      `breakpointServer.outputPath must be relative to the workspace folder. Falling back to default: ${DEFAULT_OUTPUT_PATH}`
+      `breakpointServer.outputFolderPath must be relative to the workspace folder. Falling back to default: ${DEFAULT_OUTPUT_FOLDER}`
     );
   }
 
-  if (normalizedForward.split("/").includes("..")) {
+  if (normalized !== "." && normalized.split("/").includes("..")) {
     return fallbackWithWarning(
-      `breakpointServer.outputPath cannot escape the workspace folder. Falling back to default: ${DEFAULT_OUTPUT_PATH}`
+      `breakpointServer.outputFolderPath cannot escape the workspace folder. Falling back to default: ${DEFAULT_OUTPUT_FOLDER}`
     );
   }
 
-  return { outputPath: normalizedForward };
+  return { folderPath: normalized };
 }

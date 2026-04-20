@@ -2,7 +2,7 @@
   "name": "simple-c-tester-support",
   "displayName": "Simple C Tester Support",
   "description": "Saves VS Code breakpoints to a local JSON file on every change",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "publisher": "dandevs",
   "repository": {
     "type": "git",
@@ -34,10 +34,10 @@
     "configuration": {
       "title": "Breakpoint Server",
       "properties": {
-        "breakpointServer.outputPath": {
+        "breakpointServer.outputFolderPath": {
           "type": "string",
-          "default": "test_build/breakpoints.json",
-          "description": "Output file path for breakpoints (relative to workspace root)"
+          "default": "test_build",
+          "description": "Output folder for breakpoints.json (relative to workspace root)"
         }
       }
     }

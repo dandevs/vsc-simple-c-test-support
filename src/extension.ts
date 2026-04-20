@@ -2,7 +2,7 @@ import * as vscode from "vscode";
 import * as path from "path";
 
 import { toBreakpointEntries } from "./breakpointMapper";
-import { resolveOutputPath } from "./config";
+import { resolveOutputFolder, BREAKPOINTS_FILENAME } from "./config";
 import { writeBreakpointsFile } from "./fileWriter";
 import { BreakpointEntry } from "./types";
 
@@ -55,16 +55,16 @@ function showConfigWarningIfNeeded(warning?: string): void {
 async function writeBreakpoints(
   showNoWorkspaceWarning: boolean
 ): Promise<WriteResult> {
-  const resolution = resolveOutputPath(
+  const resolution = resolveOutputFolder(
     vscode.workspace
       .getConfiguration("breakpointServer")
-      .get<string>("outputPath")
+      .get<string>("outputFolderPath")
   );
 
   showConfigWarningIfNeeded(resolution.warning);
 
-  const absolutePath = getAbsoluteOutputPath(resolution.outputPath);
-  if (!absolutePath) {
+  const folderAbs = getAbsoluteOutputPath(resolution.folderPath);
+  if (!folderAbs) {
     if (showNoWorkspaceWarning || !autoNoWorkspaceWarningShown) {
       vscode.window.showWarningMessage(
         "No workspace folder is open. Breakpoints file was not written."
@@ -77,12 +77,14 @@ async function writeBreakpoints(
 
   autoNoWorkspaceWarningShown = false;
 
+  const absolutePath = path.join(folderAbs, BREAKPOINTS_FILENAME);
+
   const entries = getBreakpoints();
-  await writeBreakpointsFile(entries, absolutePath);
+  const written = await writeBreakpointsFile(entries, absolutePath);
 
   return {
-    written: true,
-    absolutePath,
+    written,
+    absolutePath: written ? absolutePath : undefined,
   };
 }
 
@@ -150,7 +152,7 @@ export function activate(context: vscode.ExtensionContext) {
 
   context.subscriptions.push(
     vscode.workspace.onDidChangeConfiguration((event) => {
-      if (!event.affectsConfiguration("breakpointServer.outputPath")) {
+      if (!event.affectsConfiguration("breakpointServer.outputFolderPath")) {
         return;
       }
 

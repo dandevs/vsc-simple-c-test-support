@@ -1,79 +1,85 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { DEFAULT_OUTPUT_PATH, resolveOutputPath } from "../src/config";
+import {
+  DEFAULT_OUTPUT_FOLDER,
+  resolveOutputFolder,
+} from "../src/config";
 
-test("resolveOutputPath uses configured valid relative path", () => {
-  const result = resolveOutputPath("output/bps.json");
-  assert.equal(result.outputPath, "output/bps.json");
+test("resolveOutputFolder uses configured valid relative folder", () => {
+  const result = resolveOutputFolder("build/debug");
+  assert.equal(result.folderPath, "build/debug");
   assert.equal(result.warning, undefined);
 });
 
-test("resolveOutputPath falls back for non-string", () => {
-  const result = resolveOutputPath(123);
-  assert.equal(result.outputPath, DEFAULT_OUTPUT_PATH);
+test("resolveOutputFolder falls back for non-string", () => {
+  const result = resolveOutputFolder(123);
+  assert.equal(result.folderPath, DEFAULT_OUTPUT_FOLDER);
   assert.ok(result.warning);
 });
 
-test("resolveOutputPath falls back for empty string", () => {
-  const result = resolveOutputPath("");
-  assert.equal(result.outputPath, DEFAULT_OUTPUT_PATH);
+test("resolveOutputFolder falls back for empty string", () => {
+  const result = resolveOutputFolder("");
+  assert.equal(result.folderPath, DEFAULT_OUTPUT_FOLDER);
   assert.ok(result.warning);
 });
 
-test("resolveOutputPath falls back for whitespace-only string", () => {
-  const result = resolveOutputPath("   ");
-  assert.equal(result.outputPath, DEFAULT_OUTPUT_PATH);
+test("resolveOutputFolder falls back for whitespace-only string", () => {
+  const result = resolveOutputFolder("   ");
+  assert.equal(result.folderPath, DEFAULT_OUTPUT_FOLDER);
   assert.ok(result.warning);
 });
 
-test("resolveOutputPath trims whitespace from valid path", () => {
-  const result = resolveOutputPath("  build/bps.json  ");
-  assert.equal(result.outputPath, "build/bps.json");
+test("resolveOutputFolder trims whitespace", () => {
+  const result = resolveOutputFolder("  build/out  ");
+  assert.equal(result.folderPath, "build/out");
   assert.equal(result.warning, undefined);
 });
 
-test("resolveOutputPath rejects absolute paths", () => {
-  const result = resolveOutputPath("/tmp/bps.json");
-  assert.equal(result.outputPath, DEFAULT_OUTPUT_PATH);
-  assert.ok(result.warning);
-});
-
-test("resolveOutputPath rejects drive-letter absolute paths", () => {
-  const result = resolveOutputPath("C:/temp/bps.json");
-  assert.equal(result.outputPath, DEFAULT_OUTPUT_PATH);
-  assert.ok(result.warning);
-});
-
-test("resolveOutputPath rejects workspace-escape paths", () => {
-  const result = resolveOutputPath("../outside/bps.json");
-  assert.equal(result.outputPath, DEFAULT_OUTPUT_PATH);
-  assert.ok(result.warning);
-});
-
-test("resolveOutputPath rejects bare directory references", () => {
-  const currentDir = resolveOutputPath(".");
-  const parentDir = resolveOutputPath("..");
-  assert.equal(currentDir.outputPath, DEFAULT_OUTPUT_PATH);
-  assert.equal(parentDir.outputPath, DEFAULT_OUTPUT_PATH);
-  assert.ok(currentDir.warning);
-  assert.ok(parentDir.warning);
-});
-
-test("resolveOutputPath rejects URI-like values", () => {
-  const result = resolveOutputPath("file:///tmp/bps.json");
-  assert.equal(result.outputPath, DEFAULT_OUTPUT_PATH);
-  assert.ok(result.warning);
-});
-
-test("resolveOutputPath normalizes backslashes", () => {
-  const result = resolveOutputPath("test_build\\nested\\breakpoints.json");
-  assert.equal(result.outputPath, "test_build/nested/breakpoints.json");
+test("resolveOutputFolder strips trailing slashes", () => {
+  const result = resolveOutputFolder("build/out/");
+  assert.equal(result.folderPath, "build/out");
   assert.equal(result.warning, undefined);
 });
 
-test("resolveOutputPath rejects trailing separators", () => {
-  const result = resolveOutputPath("test_build/output/");
-  assert.equal(result.outputPath, DEFAULT_OUTPUT_PATH);
+test("resolveOutputFolder allows workspace root", () => {
+  const result = resolveOutputFolder(".");
+  assert.equal(result.folderPath, ".");
+  assert.equal(result.warning, undefined);
+});
+
+test("resolveOutputFolder rejects absolute paths", () => {
+  const result = resolveOutputFolder("/tmp/out");
+  assert.equal(result.folderPath, DEFAULT_OUTPUT_FOLDER);
   assert.ok(result.warning);
+});
+
+test("resolveOutputFolder rejects drive-letter absolute paths", () => {
+  const result = resolveOutputFolder("C:/temp/out");
+  assert.equal(result.folderPath, DEFAULT_OUTPUT_FOLDER);
+  assert.ok(result.warning);
+});
+
+test("resolveOutputFolder rejects workspace-escape paths", () => {
+  const result = resolveOutputFolder("../outside");
+  assert.equal(result.folderPath, DEFAULT_OUTPUT_FOLDER);
+  assert.ok(result.warning);
+});
+
+test("resolveOutputFolder rejects parent directory reference", () => {
+  const result = resolveOutputFolder("..");
+  assert.equal(result.folderPath, DEFAULT_OUTPUT_FOLDER);
+  assert.ok(result.warning);
+});
+
+test("resolveOutputFolder rejects URI-like values", () => {
+  const result = resolveOutputFolder("file:///tmp/out");
+  assert.equal(result.folderPath, DEFAULT_OUTPUT_FOLDER);
+  assert.ok(result.warning);
+});
+
+test("resolveOutputFolder normalizes backslashes", () => {
+  const result = resolveOutputFolder("test_build\\nested\\deep");
+  assert.equal(result.folderPath, "test_build/nested/deep");
+  assert.equal(result.warning, undefined);
 });

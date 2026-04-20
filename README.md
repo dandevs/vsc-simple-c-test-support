@@ -5,7 +5,7 @@ A VS Code extension that writes all editor source breakpoints to a local JSON fi
 ## Features
 
 - Auto-writes breakpoints on startup and on every breakpoint add/remove/change
-- Saves to a configurable file path (default: `test_build/breakpoints.json`)
+- Saves to a configurable folder (default: `test_build/breakpoints.json`)
 - Command Palette commands:
   - **Show Breakpoints Output** - opens the current breakpoint list in an untitled JSON file
   - **Write Breakpoints to File** - manually writes breakpoints immediately
@@ -35,26 +35,27 @@ The generated file is a JSON array:
 
 | Setting | Default | Description |
 |---|---|---|
-| `breakpointServer.outputPath` | `test_build/breakpoints.json` | Relative output file path from the first workspace folder |
+| `breakpointServer.outputFolderPath` | `test_build` | Relative output folder (file is always named `breakpoints.json`) |
 
 ### Example `settings.json`
 
 ```json
 {
-  "breakpointServer.outputPath": "build/debug/breakpoints.json"
+  "breakpointServer.outputFolderPath": "build/debug"
 }
 ```
 
-### Path rules
+### Folder rules
 
 - Must be a relative path
 - Must not escape workspace root (`..` segments are rejected)
-- Must include a file name (trailing slash is rejected)
-- Invalid values automatically fall back to `test_build/breakpoints.json`
+- The output file is always named `breakpoints.json` within this folder
+- Invalid values automatically fall back to `test_build`
 
 ## Behavior notes
 
 - The extension uses the first workspace folder as its root
+- The file is only written if the configured folder exists **and** contains a `db.json` file (acts as a sentinel)
 - If no workspace is open, the extension does not write a file and shows a warning
 - Writes are serialized internally to avoid race conditions when many breakpoint events fire quickly
 

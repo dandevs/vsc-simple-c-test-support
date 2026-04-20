@@ -8,12 +8,14 @@ import { writeBreakpointsFile } from "../src/fileWriter";
 import { BreakpointEntry } from "../src/types";
 
 async function makeTempDir(): Promise<string> {
-  return fs.mkdtemp(path.join(os.tmpdir(), "bp-test-"));
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), "bp-test-"));
+  await fs.writeFile(path.join(dir, "db.json"), "{}", "utf-8");
+  return dir;
 }
 
-test("writeBreakpointsFile creates directory and writes JSON", async () => {
+test("writeBreakpointsFile writes JSON when db.json exists", async () => {
   const dir = await makeTempDir();
-  const filePath = path.join(dir, "sub", "dir", "breakpoints.json");
+  const filePath = path.join(dir, "breakpoints.json");
 
   try {
     const entries: BreakpointEntry[] = [
@@ -21,7 +23,8 @@ test("writeBreakpointsFile creates directory and writes JSON", async () => {
       { filepath: "src/util.c", line_number: 5 },
     ];
 
-    await writeBreakpointsFile(entries, filePath);
+    const result = await writeBreakpointsFile(entries, filePath);
+    assert.equal(result, true);
 
     const content = await fs.readFile(filePath, "utf-8");
     assert.deepEqual(JSON.parse(content), entries);
@@ -30,12 +33,16 @@ test("writeBreakpointsFile creates directory and writes JSON", async () => {
   }
 });
 
-test("writeBreakpointsFile writes empty array", async () => {
+test("writeBreakpointsFile writes into subdirectory when db.json exists", async () => {
   const dir = await makeTempDir();
-  const filePath = path.join(dir, "breakpoints.json");
+  const subDir = path.join(dir, "nested");
+  await fs.mkdir(subDir);
+  await fs.writeFile(path.join(subDir, "db.json"), "{}", "utf-8");
+  const filePath = path.join(subDir, "breakpoints.json");
 
   try {
-    await writeBreakpointsFile([], filePath);
+    const result = await writeBreakpointsFile([], filePath);
+    assert.equal(result, true);
 
     const content = await fs.readFile(filePath, "utf-8");
     assert.deepEqual(JSON.parse(content), []);
@@ -79,6 +86,40 @@ test("writeBreakpointsFile output is pretty-printed", async () => {
 
     const content = await fs.readFile(filePath, "utf-8");
     assert.equal(content, JSON.stringify(entries, null, 2));
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("writeBreakpointsFile skips write when directory does not exist", async () => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), "bp-test-"));
+  const filePath = path.join(dir, "nonexistent", "breakpoints.json");
+
+  try {
+    const result = await writeBreakpointsFile(
+      [{ filepath: "a.c", line_number: 1 }],
+      filePath
+    );
+    assert.equal(result, false);
+
+    await assert.rejects(() => fs.access(filePath));
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("writeBreakpointsFile skips write when db.json is missing", async () => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), "bp-test-"));
+  const filePath = path.join(dir, "breakpoints.json");
+
+  try {
+    const result = await writeBreakpointsFile(
+      [{ filepath: "a.c", line_number: 1 }],
+      filePath
+    );
+    assert.equal(result, false);
+
+    await assert.rejects(() => fs.access(filePath));
   } finally {
     await fs.rm(dir, { recursive: true, force: true });
   }
