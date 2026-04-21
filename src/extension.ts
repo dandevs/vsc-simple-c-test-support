@@ -4,6 +4,8 @@ import * as path from "path";
 import { toBreakpointEntries } from "./breakpointMapper";
 import { resolveOutputFolder, BREAKPOINTS_FILENAME } from "./config";
 import { writeBreakpointsFile } from "./fileWriter";
+import { AnnotationProvider } from "./annotationProvider";
+import { InlineDecorator } from "./inlineDecorator";
 import { BreakpointEntry } from "./types";
 
 interface WriteResult {
@@ -14,6 +16,8 @@ interface WriteResult {
 let writeQueue: Promise<void> = Promise.resolve();
 let lastConfigWarning: string | undefined;
 let autoNoWorkspaceWarningShown = false;
+let annotationProvider: AnnotationProvider | undefined;
+let inlineDecorator: InlineDecorator | undefined;
 
 function getBreakpoints(): BreakpointEntry[] {
   const sourceBreakpoints = vscode.debug.breakpoints
@@ -36,6 +40,43 @@ function getAbsoluteOutputPath(outputPath: string): string | undefined {
     return undefined;
   }
   return path.resolve(workspaceRoot, outputPath);
+}
+
+function getOutputFolderAbsolutePath(): string | undefined {
+  const resolution = resolveOutputFolder(
+    vscode.workspace
+      .getConfiguration("breakpointServer")
+      .get<string>("outputFolderPath")
+  );
+
+  showConfigWarningIfNeeded(resolution.warning);
+  return getAbsoluteOutputPath(resolution.folderPath);
+}
+
+function createAnnotationsInfrastructure(): void {
+  annotationProvider?.dispose();
+  inlineDecorator?.dispose();
+
+  const folderAbs = getOutputFolderAbsolutePath();
+  if (!folderAbs) {
+    annotationProvider = undefined;
+    inlineDecorator = undefined;
+    return;
+  }
+
+  annotationProvider = new AnnotationProvider(folderAbs);
+  inlineDecorator = new InlineDecorator();
+
+  annotationProvider
+    .load()
+    .then(() => inlineDecorator?.update(annotationProvider!))
+    .catch(() => {
+      // Ignore load errors
+    });
+
+  annotationProvider.watch(() => {
+    inlineDecorator?.update(annotationProvider!);
+  });
 }
 
 function showConfigWarningIfNeeded(warning?: string): void {
@@ -106,6 +147,8 @@ export function activate(context: vscode.ExtensionContext) {
     );
   });
 
+  createAnnotationsInfrastructure();
+
   context.subscriptions.push(
     vscode.debug.onDidChangeBreakpoints(() => {
       queueWrite(false).catch((err: Error) => {
@@ -113,6 +156,14 @@ export function activate(context: vscode.ExtensionContext) {
           `Failed to write breakpoints: ${err.message}`
         );
       });
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.window.onDidChangeVisibleTextEditors(() => {
+      if (annotationProvider && inlineDecorator) {
+        inlineDecorator.update(annotationProvider);
+      }
     })
   );
 
@@ -161,6 +212,8 @@ export function activate(context: vscode.ExtensionContext) {
           `Failed to write breakpoints: ${err.message}`
         );
       });
+
+      createAnnotationsInfrastructure();
     })
   );
 
@@ -171,10 +224,21 @@ export function activate(context: vscode.ExtensionContext) {
           `Failed to write breakpoints: ${err.message}`
         );
       });
+
+      createAnnotationsInfrastructure();
     })
+  );
+
+  context.subscriptions.push(
+    { dispose: () => {
+      annotationProvider?.dispose();
+      inlineDecorator?.dispose();
+    }}
   );
 }
 
 export function deactivate() {
+  annotationProvider?.dispose();
+  inlineDecorator?.dispose();
   return writeQueue;
 }

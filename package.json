@@ -2,7 +2,7 @@
   "name": "simple-c-tester-support",
   "displayName": "Simple C Tester Support",
   "description": "Saves VS Code breakpoints to a local JSON file on every change",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "publisher": "dandevs",
   "repository": {
     "type": "git",
