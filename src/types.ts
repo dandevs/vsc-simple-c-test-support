@@ -10,7 +10,7 @@ export interface DbJsonAnnotation {
 
 export interface DbJsonEntry {
   collected_dependencies: string[];
-  story_annotations: Record<string, [number, string][]>;
+  story_annotations: Record<string, [number, string[]][]>;
 }
 
 export interface DbJson {

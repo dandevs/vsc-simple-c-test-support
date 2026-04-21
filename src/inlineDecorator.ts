@@ -8,7 +8,7 @@ export class InlineDecorator {
   constructor() {
     this.decorationType = vscode.window.createTextEditorDecorationType({
       after: {
-        color: new vscode.ThemeColor("editorCodeLens.foreground"),
+        color: new vscode.ThemeColor("textLink.foreground"),
         fontStyle: "italic",
         margin: "0 0 0 20px",
       },
