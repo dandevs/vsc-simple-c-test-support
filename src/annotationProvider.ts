@@ -1,6 +1,7 @@
 import * as fs from "fs/promises";
 import * as path from "path";
 import { FSWatcher, watch } from "fs";
+import { log } from "./logger";
 import { DbJson, DbJsonEntry } from "./types";
 
 export class AnnotationProvider {
@@ -22,14 +23,14 @@ export class AnnotationProvider {
     try {
       const content = await fs.readFile(this.dbPath, "utf-8");
       const db = JSON.parse(content) as DbJson;
-      console.log(`[Annotations] Loaded db.json from ${this.dbPath}`);
+      log(`[Annotations] Loaded db.json from ${this.dbPath}`);
       this.parseAnnotations(db);
-      console.log(`[Annotations] Parsed ${this.annotations.size} files with annotations`);
+      log(`[Annotations] Parsed ${this.annotations.size} files with annotations`);
       for (const [fp, lines] of this.annotations) {
-        console.log(`[Annotations]   ${fp}: ${Array.from(lines.keys()).join(", ")}`);
+        log(`[Annotations]   ${fp}: ${Array.from(lines.keys()).join(", ")}`);
       }
     } catch (err) {
-      console.error(`[Annotations] Failed to load db.json: ${err}`);
+      log(`[Annotations] Failed to load db.json: ${err}`);
       this.annotations.clear();
     }
   }

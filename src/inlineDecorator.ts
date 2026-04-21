@@ -1,4 +1,5 @@
 import * as vscode from "vscode";
+import { log } from "./logger";
 import { AnnotationProvider } from "./annotationProvider";
 
 export class InlineDecorator {
@@ -27,7 +28,7 @@ export class InlineDecorator {
   ): void {
     const docPath = editor.document.uri.fsPath;
     const annotations = provider.getAnnotations(docPath);
-    console.log(`[Decorator] Updating ${docPath}, found ${annotations?.size ?? 0} annotations`);
+    log(`[Decorator] Updating ${docPath}, found ${annotations?.size ?? 0} annotations`);
 
     if (!annotations || annotations.size === 0) {
       editor.setDecorations(this.decorationType, []);
@@ -39,7 +40,7 @@ export class InlineDecorator {
     for (const [lineNumber, annotation] of annotations) {
       const zeroBasedLine = lineNumber - 1;
       if (zeroBasedLine < 0 || zeroBasedLine >= editor.document.lineCount) {
-        console.log(`[Decorator] Skipping out-of-range line ${lineNumber} (doc has ${editor.document.lineCount} lines)`);
+        log(`[Decorator] Skipping out-of-range line ${lineNumber} (doc has ${editor.document.lineCount} lines)`);
         continue;
       }
 
@@ -59,7 +60,7 @@ export class InlineDecorator {
           },
         },
       });
-      console.log(`[Decorator] Adding decoration at line ${lineNumber}: ${annotation}`);
+      log(`[Decorator] Adding decoration at line ${lineNumber}: ${annotation}`);
     }
 
     editor.setDecorations(this.decorationType, decorations);

@@ -6,6 +6,7 @@ import { resolveOutputFolder, BREAKPOINTS_FILENAME } from "./config";
 import { writeBreakpointsFile } from "./fileWriter";
 import { AnnotationProvider } from "./annotationProvider";
 import { InlineDecorator } from "./inlineDecorator";
+import { log, setLogDirectory } from "./logger";
 import { BreakpointEntry } from "./types";
 
 interface WriteResult {
@@ -58,7 +59,11 @@ function createAnnotationsInfrastructure(): void {
   inlineDecorator?.dispose();
 
   const folderAbs = getOutputFolderAbsolutePath();
-  console.log(`[Extension] Creating annotation infrastructure for folder: ${folderAbs}`);
+  if (folderAbs) {
+    setLogDirectory(folderAbs);
+  }
+
+  log(`[Extension] Creating annotation infrastructure for folder: ${folderAbs}`);
   if (!folderAbs) {
     annotationProvider = undefined;
     inlineDecorator = undefined;
@@ -71,15 +76,15 @@ function createAnnotationsInfrastructure(): void {
   annotationProvider
     .load()
     .then(() => {
-      console.log("[Extension] Initial load complete, updating decorators");
+      log("[Extension] Initial load complete, updating decorators");
       inlineDecorator?.update(annotationProvider!);
     })
     .catch((err) => {
-      console.error("[Extension] Initial load failed:", err);
+      log(`[Extension] Initial load failed: ${err}`);
     });
 
   annotationProvider.watch(() => {
-    console.log("[Extension] db.json changed, updating decorators");
+    log("[Extension] db.json changed, updating decorators");
     inlineDecorator?.update(annotationProvider!);
   });
 }
