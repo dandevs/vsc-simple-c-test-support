@@ -26,6 +26,10 @@ export class InlineDecorator {
     editor: vscode.TextEditor,
     provider: AnnotationProvider
   ): void {
+    if (editor.document.uri.scheme !== "file") {
+      return;
+    }
+
     const docPath = editor.document.uri.fsPath;
     const annotations = provider.getAnnotations(docPath);
     log(`[Decorator] Updating ${docPath}, found ${annotations?.size ?? 0} annotations`);

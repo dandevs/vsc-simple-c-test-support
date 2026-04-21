@@ -100,7 +100,7 @@ export class AnnotationProvider {
     const result = new Map<string, [number, string][]>();
 
     for (const [filePath, annotations] of Object.entries(
-      entry.story_annotations
+      entry.story_annotations ?? {}
     )) {
       const parsed = annotations.map(
         ([lineNumber, annotation]): [number, string] => [lineNumber, annotation]
