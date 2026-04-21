@@ -13,4 +13,7 @@ export interface DbJsonEntry {
   story_annotations: Record<string, [number, string][]>;
 }
 
-export type DbJson = Record<string, DbJsonEntry>;
+export interface DbJson {
+  preferences?: Record<string, unknown>;
+  tests: Record<string, DbJsonEntry>;
+}

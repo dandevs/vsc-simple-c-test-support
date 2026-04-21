@@ -60,7 +60,7 @@ export class AnnotationProvider {
   private parseAnnotations(db: DbJson): void {
     const newAnnotations = new Map<string, Map<number, string>>();
 
-    for (const [testFilePath, entry] of Object.entries(db)) {
+    for (const [testFilePath, entry] of Object.entries(db.tests ?? {})) {
       const normalizedTestPath = path.resolve(testFilePath);
       const fileAnnotations = this.extractFileAnnotations(entry);
 
