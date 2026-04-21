@@ -7,9 +7,9 @@ export class InlineDecorator {
   constructor() {
     this.decorationType = vscode.window.createTextEditorDecorationType({
       after: {
-        color: new vscode.ThemeColor("editor.inlineValuesForeground"),
+        color: new vscode.ThemeColor("editorCodeLens.foreground"),
         fontStyle: "italic",
-        margin: "0 0 0 1em",
+        margin: "0 0 0 20px",
       },
       rangeBehavior: vscode.DecorationRangeBehavior.ClosedOpen,
     });
@@ -25,7 +25,10 @@ export class InlineDecorator {
     editor: vscode.TextEditor,
     provider: AnnotationProvider
   ): void {
-    const annotations = provider.getAnnotations(editor.document.uri.fsPath);
+    const docPath = editor.document.uri.fsPath;
+    const annotations = provider.getAnnotations(docPath);
+    console.log(`[Decorator] Updating ${docPath}, found ${annotations?.size ?? 0} annotations`);
+
     if (!annotations || annotations.size === 0) {
       editor.setDecorations(this.decorationType, []);
       return;
@@ -36,6 +39,7 @@ export class InlineDecorator {
     for (const [lineNumber, annotation] of annotations) {
       const zeroBasedLine = lineNumber - 1;
       if (zeroBasedLine < 0 || zeroBasedLine >= editor.document.lineCount) {
+        console.log(`[Decorator] Skipping out-of-range line ${lineNumber} (doc has ${editor.document.lineCount} lines)`);
         continue;
       }
 
@@ -51,10 +55,11 @@ export class InlineDecorator {
         range,
         renderOptions: {
           after: {
-            contentText: annotation,
+            contentText: `  ${annotation}`,
           },
         },
       });
+      console.log(`[Decorator] Adding decoration at line ${lineNumber}: ${annotation}`);
     }
 
     editor.setDecorations(this.decorationType, decorations);

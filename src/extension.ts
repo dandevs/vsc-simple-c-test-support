@@ -58,6 +58,7 @@ function createAnnotationsInfrastructure(): void {
   inlineDecorator?.dispose();
 
   const folderAbs = getOutputFolderAbsolutePath();
+  console.log(`[Extension] Creating annotation infrastructure for folder: ${folderAbs}`);
   if (!folderAbs) {
     annotationProvider = undefined;
     inlineDecorator = undefined;
@@ -69,12 +70,16 @@ function createAnnotationsInfrastructure(): void {
 
   annotationProvider
     .load()
-    .then(() => inlineDecorator?.update(annotationProvider!))
-    .catch(() => {
-      // Ignore load errors
+    .then(() => {
+      console.log("[Extension] Initial load complete, updating decorators");
+      inlineDecorator?.update(annotationProvider!);
+    })
+    .catch((err) => {
+      console.error("[Extension] Initial load failed:", err);
     });
 
   annotationProvider.watch(() => {
+    console.log("[Extension] db.json changed, updating decorators");
     inlineDecorator?.update(annotationProvider!);
   });
 }
