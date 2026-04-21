@@ -8,9 +8,15 @@ export interface DbJsonAnnotation {
   annotation: string;
 }
 
+export interface AnnotationEntry {
+  lineNumber: number;
+  lineText: string;
+  annotation: string;
+}
+
 export interface DbJsonEntry {
   collected_dependencies: string[];
-  story_annotations: Record<string, [number, string[]][]>;
+  story_annotations: Record<string, [string, number, string[]][]>;
 }
 
 export interface DbJson {

@@ -2,12 +2,17 @@ import * as fs from "fs/promises";
 import * as path from "path";
 import { FSWatcher, watch } from "fs";
 import { log } from "./logger";
-import { DbJson, DbJsonEntry } from "./types";
+import { AnnotationEntry, DbJson, DbJsonEntry } from "./types";
+
+interface StoredAnnotation {
+  lineNumber: number;
+  annotation: string;
+}
 
 export class AnnotationProvider {
   private dbPath: string;
   private watcher?: FSWatcher;
-  private annotations: Map<string, Map<number, string>> = new Map();
+  private annotations: Map<string, Map<string, StoredAnnotation>> = new Map();
   private debounceTimer?: NodeJS.Timeout;
   private disposed = false;
 
@@ -26,8 +31,8 @@ export class AnnotationProvider {
       log(`[Annotations] Loaded db.json from ${this.dbPath}`);
       this.parseAnnotations(db);
       log(`[Annotations] Parsed ${this.annotations.size} files with annotations`);
-      for (const [fp, lines] of this.annotations) {
-        log(`[Annotations]   ${fp}: ${Array.from(lines.keys()).join(", ")}`);
+      for (const [fp] of this.annotations) {
+        log(`[Annotations]   ${fp}`);
       }
     } catch (err) {
       log(`[Annotations] Failed to load db.json: ${err}`);
@@ -59,15 +64,28 @@ export class AnnotationProvider {
     }
   }
 
-  getAnnotations(filePath: string): Map<number, string> | undefined {
+  getAnnotations(filePath: string): AnnotationEntry[] {
     const normalized = path.resolve(filePath);
-    return this.annotations.get(normalized);
+    const fileMap = this.annotations.get(normalized);
+    if (!fileMap) {
+      return [];
+    }
+
+    const entries: AnnotationEntry[] = [];
+    for (const [lineText, stored] of fileMap) {
+      entries.push({
+        lineNumber: stored.lineNumber,
+        lineText,
+        annotation: stored.annotation,
+      });
+    }
+    return entries;
   }
 
   private parseAnnotations(db: DbJson): void {
-    const newAnnotations = new Map<string, Map<number, string>>();
+    const newAnnotations = new Map<string, Map<string, StoredAnnotation>>();
 
-    for (const [testFilePath, entry] of Object.entries(db.tests ?? {})) {
+    for (const [, entry] of Object.entries(db.tests ?? {})) {
       const fileAnnotations = this.extractFileAnnotations(entry);
 
       for (const [sourcePath, lines] of fileAnnotations) {
@@ -78,12 +96,18 @@ export class AnnotationProvider {
           newAnnotations.set(normalizedSourcePath, fileMap);
         }
 
-        for (const [lineNumber, snapshots] of lines) {
-          const existing = fileMap.get(lineNumber);
+        for (const [lineText, lineNumber, snapshots] of lines) {
+          const existing = fileMap.get(lineText);
           if (existing) {
-            fileMap.set(lineNumber, this.mergeSnapshots(existing, snapshots));
+            fileMap.set(lineText, {
+              lineNumber,
+              annotation: this.mergeSnapshots(existing.annotation, snapshots),
+            });
           } else {
-            fileMap.set(lineNumber, this.formatSnapshots(snapshots));
+            fileMap.set(lineText, {
+              lineNumber,
+              annotation: this.formatSnapshots(snapshots),
+            });
           }
         }
       }
@@ -96,7 +120,6 @@ export class AnnotationProvider {
     existing: string,
     newSnapshots: string[]
   ): string {
-    // Parse existing and new, then recombine
     const existingParsed = this.parseSnapshotTokens(existing);
     const newParsed = this.parseSnapshotTokens(newSnapshots.join(" "));
 
@@ -154,10 +177,7 @@ export class AnnotationProvider {
         continue;
       }
 
-      // Take last 3 values
       const last3 = values.slice(-3);
-
-      // If all last 3 are the same, show single value
       const allSame = last3.every((v) => v === last3[0]);
       if (allSame) {
         parts.push(`[${key}=${last3[0]}]`);
@@ -171,14 +191,15 @@ export class AnnotationProvider {
 
   private extractFileAnnotations(
     entry: DbJsonEntry
-  ): Map<string, [number, string[]][]> {
-    const result = new Map<string, [number, string[]][]>();
+  ): Map<string, [string, number, string[]][]> {
+    const result = new Map<string, [string, number, string[]][]>();
 
     for (const [filePath, annotations] of Object.entries(
       entry.story_annotations ?? {}
     )) {
       const parsed = annotations.map(
-        ([lineNumber, snapshots]): [number, string[]] => [
+        ([lineText, lineNumber, snapshots]): [string, number, string[]] => [
+          lineText,
           lineNumber,
           snapshots,
         ]

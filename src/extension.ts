@@ -19,6 +19,7 @@ let lastConfigWarning: string | undefined;
 let autoNoWorkspaceWarningShown = false;
 let annotationProvider: AnnotationProvider | undefined;
 let inlineDecorator: InlineDecorator | undefined;
+let textChangeDebounceTimer: NodeJS.Timeout | undefined;
 
 function getBreakpoints(): BreakpointEntry[] {
   const sourceBreakpoints = vscode.debug.breakpoints
@@ -92,6 +93,19 @@ function createAnnotationsInfrastructure(): void {
     log("[Extension] db.json changed, updating decorators");
     inlineDecorator?.update(annotationProvider!);
   });
+}
+
+function scheduleAnnotationUpdate(): void {
+  if (textChangeDebounceTimer) {
+    clearTimeout(textChangeDebounceTimer);
+  }
+  textChangeDebounceTimer = setTimeout(() => {
+    textChangeDebounceTimer = undefined;
+    if (annotationProvider && inlineDecorator) {
+      log("[Extension] Document changed, updating decorators");
+      inlineDecorator.update(annotationProvider);
+    }
+  }, 500);
 }
 
 function showConfigWarningIfNeeded(warning?: string): void {
@@ -183,6 +197,12 @@ export function activate(context: vscode.ExtensionContext) {
   );
 
   context.subscriptions.push(
+    vscode.workspace.onDidChangeTextDocument(() => {
+      scheduleAnnotationUpdate();
+    })
+  );
+
+  context.subscriptions.push(
     vscode.commands.registerCommand("breakpointServer.showOutput", async () => {
       const json = JSON.stringify(getBreakpoints(), null, 2);
       const doc = await vscode.workspace.openTextDocument({
@@ -262,6 +282,9 @@ export function activate(context: vscode.ExtensionContext) {
     { dispose: () => {
       annotationProvider?.dispose();
       inlineDecorator?.dispose();
+      if (textChangeDebounceTimer) {
+        clearTimeout(textChangeDebounceTimer);
+      }
     }}
   );
 }
@@ -269,5 +292,8 @@ export function activate(context: vscode.ExtensionContext) {
 export function deactivate() {
   annotationProvider?.dispose();
   inlineDecorator?.dispose();
+  if (textChangeDebounceTimer) {
+    clearTimeout(textChangeDebounceTimer);
+  }
   return writeQueue;
 }
