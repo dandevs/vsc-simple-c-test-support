@@ -4,13 +4,18 @@ import * as path from "path";
 const LOG_FILENAME = "session.log";
 
 let logDir: string | undefined;
+let enabled = false;
 
 export function setLogDirectory(dir: string): void {
   logDir = dir;
 }
 
+export function setLoggingEnabled(value: boolean): void {
+  enabled = value;
+}
+
 export async function log(message: string): Promise<void> {
-  if (!logDir) {
+  if (!enabled || !logDir) {
     return;
   }
 

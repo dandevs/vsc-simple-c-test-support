@@ -38,6 +38,11 @@
           "type": "string",
           "default": "test_build",
           "description": "Output folder for breakpoints.json (relative to workspace root)"
+        },
+        "breakpointServer.enableLogging": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable diagnostic logging to <outputFolder>/session.log"
         }
       }
     }

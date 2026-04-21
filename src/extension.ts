@@ -6,7 +6,7 @@ import { resolveOutputFolder, BREAKPOINTS_FILENAME } from "./config";
 import { writeBreakpointsFile } from "./fileWriter";
 import { AnnotationProvider } from "./annotationProvider";
 import { InlineDecorator } from "./inlineDecorator";
-import { log, setLogDirectory } from "./logger";
+import { log, setLogDirectory, setLoggingEnabled } from "./logger";
 import { BreakpointEntry } from "./types";
 
 interface WriteResult {
@@ -59,6 +59,11 @@ function createAnnotationsInfrastructure(): void {
   inlineDecorator?.dispose();
 
   const folderAbs = getOutputFolderAbsolutePath();
+  const loggingEnabled = vscode.workspace
+    .getConfiguration("breakpointServer")
+    .get<boolean>("enableLogging", false);
+
+  setLoggingEnabled(loggingEnabled);
   if (folderAbs) {
     setLogDirectory(folderAbs);
   }
@@ -213,7 +218,21 @@ export function activate(context: vscode.ExtensionContext) {
 
   context.subscriptions.push(
     vscode.workspace.onDidChangeConfiguration((event) => {
-      if (!event.affectsConfiguration("breakpointServer.outputFolderPath")) {
+      const loggingChanged = event.affectsConfiguration(
+        "breakpointServer.enableLogging"
+      );
+      const outputChanged = event.affectsConfiguration(
+        "breakpointServer.outputFolderPath"
+      );
+
+      if (loggingChanged) {
+        const newValue = vscode.workspace
+          .getConfiguration("breakpointServer")
+          .get<boolean>("enableLogging", false);
+        setLoggingEnabled(newValue);
+      }
+
+      if (!outputChanged) {
         return;
       }
 
