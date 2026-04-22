@@ -19,7 +19,13 @@ export interface DbJsonEntry {
   story_annotations: Record<string, [string, number, string[]][]>;
 }
 
+export interface DebugLine {
+  filePath: string;
+  lineNumber: number;
+}
+
 export interface DbJson {
   preferences?: Record<string, unknown>;
   tests: Record<string, DbJsonEntry>;
+  debugLine?: DebugLine;
 }

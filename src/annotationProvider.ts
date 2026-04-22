@@ -2,7 +2,7 @@ import * as fs from "fs/promises";
 import * as path from "path";
 import { FSWatcher, watch } from "fs";
 import { log } from "./logger";
-import { AnnotationEntry, DbJson, DbJsonEntry } from "./types";
+import { AnnotationEntry, DbJson, DbJsonEntry, DebugLine } from "./types";
 
 interface StoredAnnotation {
   lineNumber: number;
@@ -13,6 +13,7 @@ export class AnnotationProvider {
   private dbPath: string;
   private watcher?: FSWatcher;
   private annotations: Map<string, Map<string, StoredAnnotation>> = new Map();
+  private debugLine?: DebugLine;
   private debounceTimer?: NodeJS.Timeout;
   private disposed = false;
 
@@ -30,6 +31,7 @@ export class AnnotationProvider {
       const db = JSON.parse(content) as DbJson;
       log(`[Annotations] Loaded db.json from ${this.dbPath}`);
       this.parseAnnotations(db);
+      this.parseDebugLine(db);
       log(`[Annotations] Parsed ${this.annotations.size} files with annotations`);
       for (const [fp] of this.annotations) {
         log(`[Annotations]   ${fp}`);
@@ -187,6 +189,23 @@ export class AnnotationProvider {
     }
 
     return parts.join(" ");
+  }
+
+  getDebugLine(): DebugLine | undefined {
+    return this.debugLine;
+  }
+
+  private parseDebugLine(db: DbJson): void {
+    if (db.debugLine) {
+      this.debugLine = {
+        filePath: path.resolve(db.debugLine.filePath),
+        lineNumber: db.debugLine.lineNumber,
+      };
+      log(`[Annotations] Debug line set: ${this.debugLine.filePath}:${this.debugLine.lineNumber}`);
+    } else {
+      this.debugLine = undefined;
+      log("[Annotations] Debug line cleared");
+    }
   }
 
   private extractFileAnnotations(

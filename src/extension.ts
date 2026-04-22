@@ -6,6 +6,7 @@ import { resolveOutputFolder, BREAKPOINTS_FILENAME } from "./config";
 import { writeBreakpointsFile } from "./fileWriter";
 import { AnnotationProvider } from "./annotationProvider";
 import { InlineDecorator } from "./inlineDecorator";
+import { DebugLineHighlighter } from "./debugLineHighlighter";
 import { log, setLogDirectory, setLoggingEnabled } from "./logger";
 import { BreakpointEntry } from "./types";
 
@@ -19,6 +20,7 @@ let lastConfigWarning: string | undefined;
 let autoNoWorkspaceWarningShown = false;
 let annotationProvider: AnnotationProvider | undefined;
 let inlineDecorator: InlineDecorator | undefined;
+let debugLineHighlighter: DebugLineHighlighter | undefined;
 let textChangeDebounceTimer: NodeJS.Timeout | undefined;
 
 function getBreakpoints(): BreakpointEntry[] {
@@ -58,6 +60,7 @@ function getOutputFolderAbsolutePath(): string | undefined {
 function createAnnotationsInfrastructure(): void {
   annotationProvider?.dispose();
   inlineDecorator?.dispose();
+  debugLineHighlighter?.dispose();
 
   const folderAbs = getOutputFolderAbsolutePath();
   const loggingEnabled = vscode.workspace
@@ -73,17 +76,20 @@ function createAnnotationsInfrastructure(): void {
   if (!folderAbs) {
     annotationProvider = undefined;
     inlineDecorator = undefined;
+    debugLineHighlighter = undefined;
     return;
   }
 
   annotationProvider = new AnnotationProvider(folderAbs);
   inlineDecorator = new InlineDecorator();
+  debugLineHighlighter = new DebugLineHighlighter();
 
   annotationProvider
     .load()
     .then(() => {
       log("[Extension] Initial load complete, updating decorators");
       inlineDecorator?.update(annotationProvider!);
+      debugLineHighlighter?.update(annotationProvider!);
     })
     .catch((err) => {
       log(`[Extension] Initial load failed: ${err}`);
@@ -92,6 +98,7 @@ function createAnnotationsInfrastructure(): void {
   annotationProvider.watch(() => {
     log("[Extension] db.json changed, updating decorators");
     inlineDecorator?.update(annotationProvider!);
+    debugLineHighlighter?.update(annotationProvider!);
   });
 }
 
@@ -104,6 +111,7 @@ function scheduleAnnotationUpdate(): void {
     if (annotationProvider && inlineDecorator) {
       log("[Extension] Document changed, updating decorators");
       inlineDecorator.update(annotationProvider);
+      debugLineHighlighter?.onDocumentChanged(annotationProvider);
     }
   }, 500);
 }
@@ -282,6 +290,7 @@ export function activate(context: vscode.ExtensionContext) {
     { dispose: () => {
       annotationProvider?.dispose();
       inlineDecorator?.dispose();
+      debugLineHighlighter?.dispose();
       if (textChangeDebounceTimer) {
         clearTimeout(textChangeDebounceTimer);
       }
@@ -292,6 +301,7 @@ export function activate(context: vscode.ExtensionContext) {
 export function deactivate() {
   annotationProvider?.dispose();
   inlineDecorator?.dispose();
+  debugLineHighlighter?.dispose();
   if (textChangeDebounceTimer) {
     clearTimeout(textChangeDebounceTimer);
   }
