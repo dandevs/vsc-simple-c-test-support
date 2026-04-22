@@ -5,19 +5,20 @@ import { log } from "./logger";
 import { AnnotationEntry, DbJson, DbJsonEntry, DebugLine } from "./types";
 
 interface StoredAnnotation {
-  lineNumber: number;
   annotation: string;
 }
 
 export class AnnotationProvider {
   private dbPath: string;
+  private outputFolderPath: string;
   private watcher?: FSWatcher;
-  private annotations: Map<string, Map<string, StoredAnnotation>> = new Map();
+  private annotations: Map<string, Map<number, StoredAnnotation>> = new Map();
   private debugLine?: DebugLine;
   private debounceTimer?: NodeJS.Timeout;
   private disposed = false;
 
   constructor(outputFolderPath: string) {
+    this.outputFolderPath = outputFolderPath;
     this.dbPath = path.join(outputFolderPath, "db.json");
   }
 
@@ -36,9 +37,15 @@ export class AnnotationProvider {
       for (const [fp] of this.annotations) {
         log(`[Annotations]   ${fp}`);
       }
-    } catch (err) {
-      log(`[Annotations] Failed to load db.json: ${err}`);
+    } catch (err: unknown) {
+      const code = (err as NodeJS.ErrnoException).code;
+      if (code === "ENOENT") {
+        log("[Annotations] db.json not found, waiting for file...");
+      } else {
+        log(`[Annotations] Failed to load db.json: ${err}`);
+      }
       this.annotations.clear();
+      this.debugLine = undefined;
     }
   }
 
@@ -48,8 +55,12 @@ export class AnnotationProvider {
     }
 
     try {
-      this.watcher = watch(this.dbPath, (eventType) => {
-        if (eventType !== "change") {
+      this.watcher = watch(this.outputFolderPath, (eventType, filename) => {
+        if (filename !== "db.json") {
+          return;
+        }
+
+        if (eventType !== "change" && eventType !== "rename") {
           return;
         }
 
@@ -61,8 +72,9 @@ export class AnnotationProvider {
           this.load().then(onChange, onChange);
         }, 100);
       });
+      log(`[Annotations] Watching directory: ${this.outputFolderPath}`);
     } catch {
-      // File doesn't exist yet; ignore
+      // Directory doesn't exist yet; ignore
     }
   }
 
@@ -74,10 +86,10 @@ export class AnnotationProvider {
     }
 
     const entries: AnnotationEntry[] = [];
-    for (const [lineText, stored] of fileMap) {
+    for (const [lineNumber, stored] of fileMap) {
       entries.push({
-        lineNumber: stored.lineNumber,
-        lineText,
+        lineNumber,
+        lineText: "",
         annotation: stored.annotation,
       });
     }
@@ -85,7 +97,7 @@ export class AnnotationProvider {
   }
 
   private parseAnnotations(db: DbJson): void {
-    const newAnnotations = new Map<string, Map<string, StoredAnnotation>>();
+    const newAnnotations = new Map<string, Map<number, StoredAnnotation>>();
 
     for (const [, entry] of Object.entries(db.tests ?? {})) {
       const fileAnnotations = this.extractFileAnnotations(entry);
@@ -99,15 +111,13 @@ export class AnnotationProvider {
         }
 
         for (const [lineText, lineNumber, snapshots] of lines) {
-          const existing = fileMap.get(lineText);
+          const existing = fileMap.get(lineNumber);
           if (existing) {
-            fileMap.set(lineText, {
-              lineNumber,
+            fileMap.set(lineNumber, {
               annotation: this.mergeSnapshots(existing.annotation, snapshots),
             });
           } else {
-            fileMap.set(lineText, {
-              lineNumber,
+            fileMap.set(lineNumber, {
               annotation: this.formatSnapshots(snapshots),
             });
           }

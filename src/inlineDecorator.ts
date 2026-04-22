@@ -43,17 +43,17 @@ export class InlineDecorator {
     const decorations: vscode.DecorationOptions[] = [];
 
     for (const entry of entries) {
-      const resolvedLine = this.resolveLineNumber(editor, entry);
-      if (resolvedLine === undefined) {
-        log(`[Decorator] Could not find line text: "${entry.lineText}"`);
+      const zeroBased = entry.lineNumber - 1;
+      if (zeroBased < 0 || zeroBased >= editor.document.lineCount) {
+        log(`[Decorator] Line ${entry.lineNumber} out of range`);
         continue;
       }
 
-      const line = editor.document.lineAt(resolvedLine);
+      const line = editor.document.lineAt(zeroBased);
       const range = new vscode.Range(
-        resolvedLine,
+        zeroBased,
         line.text.length,
-        resolvedLine,
+        zeroBased,
         line.text.length
       );
 
@@ -66,37 +66,11 @@ export class InlineDecorator {
         },
       });
       log(
-        `[Decorator] Adding decoration at line ${resolvedLine + 1}: ${entry.annotation}`
+        `[Decorator] Adding decoration at line ${entry.lineNumber}: ${entry.annotation}`
       );
     }
 
     editor.setDecorations(this.decorationType, decorations);
-  }
-
-  private resolveLineNumber(
-    editor: vscode.TextEditor,
-    entry: AnnotationEntry
-  ): number | undefined {
-    const doc = editor.document;
-    const zeroBased = entry.lineNumber - 1;
-
-    // Fast path: check if the line still matches at the expected number
-    if (
-      zeroBased >= 0 &&
-      zeroBased < doc.lineCount &&
-      doc.lineAt(zeroBased).text.trim() === entry.lineText
-    ) {
-      return zeroBased;
-    }
-
-    // Fallback: search entire document for the line text
-    for (let i = 0; i < doc.lineCount; i++) {
-      if (doc.lineAt(i).text.trim() === entry.lineText) {
-        return i;
-      }
-    }
-
-    return undefined;
   }
 
   dispose(): void {
