@@ -79,9 +79,7 @@ export class DebugLineHighlighter {
 
       const line = editor.document.lineAt(resolvedLine);
       const range = new vscode.Range(resolvedLine, 0, resolvedLine, line.text.length);
-      editor.setDecorations(this.decorationType, [
-        { range, renderOptions: { after: { contentText: "  [debug]" } } },
-      ]);
+      editor.setDecorations(this.decorationType, [{ range }]);
 
       log(`[DebugLine] Highlighted line ${resolvedLine + 1}`);
     } catch (err) {
@@ -105,9 +103,7 @@ export class DebugLineHighlighter {
 
     const line = this.currentEditor.document.lineAt(resolvedLine);
     const range = new vscode.Range(resolvedLine, 0, resolvedLine, line.text.length);
-    this.currentEditor.setDecorations(this.decorationType, [
-      { range, renderOptions: { after: { contentText: "  [debug]" } } },
-    ]);
+    this.currentEditor.setDecorations(this.decorationType, [{ range }]);
   }
 
   private resolveLineNumber(
