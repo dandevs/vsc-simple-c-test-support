@@ -21,7 +21,8 @@ let autoNoWorkspaceWarningShown = false;
 let annotationProvider: AnnotationProvider | undefined;
 let inlineDecorator: InlineDecorator | undefined;
 let debugLineHighlighter: DebugLineHighlighter | undefined;
-let textChangeDebounceTimer: NodeJS.Timeout | undefined;
+let textChangeThrottleTimer: NodeJS.Timeout | undefined;
+let textChangeThrottled = false;
 
 function getBreakpoints(): BreakpointEntry[] {
   const sourceBreakpoints = vscode.debug.breakpoints
@@ -103,17 +104,26 @@ function createAnnotationsInfrastructure(): void {
 }
 
 function scheduleAnnotationUpdate(): void {
-  if (textChangeDebounceTimer) {
-    clearTimeout(textChangeDebounceTimer);
+  if (textChangeThrottleTimer) {
+    textChangeThrottled = true;
+    return;
   }
-  textChangeDebounceTimer = setTimeout(() => {
-    textChangeDebounceTimer = undefined;
-    if (annotationProvider && inlineDecorator) {
+
+  if (annotationProvider && inlineDecorator) {
+    log("[Extension] Document changed, updating decorators");
+    inlineDecorator.update(annotationProvider);
+    debugLineHighlighter?.onDocumentChanged(annotationProvider);
+  }
+
+  textChangeThrottleTimer = setTimeout(() => {
+    textChangeThrottleTimer = undefined;
+    if (textChangeThrottled && annotationProvider && inlineDecorator) {
       log("[Extension] Document changed, updating decorators");
       inlineDecorator.update(annotationProvider);
       debugLineHighlighter?.onDocumentChanged(annotationProvider);
     }
-  }, 500);
+    textChangeThrottled = false;
+  }, 50);
 }
 
 function showConfigWarningIfNeeded(warning?: string): void {
@@ -291,8 +301,8 @@ export function activate(context: vscode.ExtensionContext) {
       annotationProvider?.dispose();
       inlineDecorator?.dispose();
       debugLineHighlighter?.dispose();
-      if (textChangeDebounceTimer) {
-        clearTimeout(textChangeDebounceTimer);
+      if (textChangeThrottleTimer) {
+        clearTimeout(textChangeThrottleTimer);
       }
     }}
   );
@@ -302,8 +312,8 @@ export function deactivate() {
   annotationProvider?.dispose();
   inlineDecorator?.dispose();
   debugLineHighlighter?.dispose();
-  if (textChangeDebounceTimer) {
-    clearTimeout(textChangeDebounceTimer);
+  if (textChangeThrottleTimer) {
+    clearTimeout(textChangeThrottleTimer);
   }
   return writeQueue;
 }
