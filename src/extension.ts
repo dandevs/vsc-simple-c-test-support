@@ -27,7 +27,7 @@ function getBreakpoints(): BreakpointEntry[] {
   const sourceBreakpoints = vscode.debug.breakpoints
     .filter(
       (bp): bp is vscode.SourceBreakpoint =>
-        bp instanceof vscode.SourceBreakpoint
+        bp instanceof vscode.SourceBreakpoint && bp.enabled
     )
     .map((bp) => ({
       fsPath: bp.location.uri.fsPath,
