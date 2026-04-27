@@ -16,6 +16,7 @@ export class AnnotationProvider {
   private debugLine?: DebugLine;
   private debounceTimer?: NodeJS.Timeout;
   private disposed = false;
+  private active = true;
 
   constructor(outputFolderPath: string) {
     this.outputFolderPath = outputFolderPath;
@@ -31,6 +32,16 @@ export class AnnotationProvider {
       const content = await fs.readFile(this.dbPath, "utf-8");
       const db = JSON.parse(content) as DbJson;
       log(`[Annotations] Loaded db.json from ${this.dbPath}`);
+
+      if (db.active === false) {
+        this.active = false;
+        this.annotations.clear();
+        this.debugLine = undefined;
+        log("[Annotations] active=false, annotations disabled");
+        return;
+      }
+
+      this.active = true;
       this.parseAnnotations(db);
       this.parseDebugLine(db);
       log(`[Annotations] Parsed ${this.annotations.size} files with annotations`);
@@ -79,6 +90,10 @@ export class AnnotationProvider {
   }
 
   getAnnotations(filePath: string): AnnotationEntry[] {
+    if (!this.active) {
+      return [];
+    }
+
     const normalized = path.resolve(filePath);
     const fileMap = this.annotations.get(normalized);
     if (!fileMap) {
@@ -202,6 +217,9 @@ export class AnnotationProvider {
   }
 
   getDebugLine(): DebugLine | undefined {
+    if (!this.active) {
+      return undefined;
+    }
     return this.debugLine;
   }
 

@@ -28,4 +28,5 @@ export interface DbJson {
   preferences?: Record<string, unknown>;
   tests: Record<string, DbJsonEntry>;
   debugLine?: DebugLine;
+  active?: boolean;
 }
