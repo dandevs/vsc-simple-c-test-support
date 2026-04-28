@@ -50,6 +50,13 @@ export class InlineDecorator {
       }
 
       const line = editor.document.lineAt(zeroBased);
+      if (entry.lineText && line.text.trim() !== entry.lineText.trim()) {
+        log(`[Decorator] Line ${entry.lineNumber} text mismatch: expected "${entry.lineText}" got "${line.text}"`);
+        continue;
+      }
+
+      log(`[Decorator] Matched line ${entry.lineNumber}: "${line.text}"`);
+
       const range = new vscode.Range(
         zeroBased,
         line.text.length,

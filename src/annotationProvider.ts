@@ -5,6 +5,7 @@ import { log } from "./logger";
 import { AnnotationEntry, DbJson, DbJsonEntry, DebugLine } from "./types";
 
 interface StoredAnnotation {
+  lineText: string;
   annotation: string;
 }
 
@@ -104,7 +105,7 @@ export class AnnotationProvider {
     for (const [lineNumber, stored] of fileMap) {
       entries.push({
         lineNumber,
-        lineText: "",
+        lineText: stored.lineText,
         annotation: stored.annotation,
       });
     }
@@ -129,10 +130,12 @@ export class AnnotationProvider {
           const existing = fileMap.get(lineNumber);
           if (existing) {
             fileMap.set(lineNumber, {
+              lineText,
               annotation: this.mergeSnapshots(existing.annotation, snapshots),
             });
           } else {
             fileMap.set(lineNumber, {
+              lineText,
               annotation: this.formatSnapshots(snapshots),
             });
           }
